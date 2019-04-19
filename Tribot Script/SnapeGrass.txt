@@ -1,0 +1,809 @@
+package scripts;
+
+import java.awt.*;
+import java.io.IOException;
+import java.net.URL;
+import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
+import org.tribot.api.*;
+import org.tribot.api.input.Keyboard;
+import org.tribot.api.input.Mouse;
+import org.tribot.api2007.*;
+import org.tribot.api2007.types.*;
+import org.tribot.script.Script;
+import org.tribot.script.interfaces.Painting;
+
+public class SnapeGrass extends Script
+    implements Painting
+{
+    /* member class not found */
+    class State {}
+
+
+    private final long START_TIME = System.currentTimeMillis();
+    private static double version = 1.0D;
+    private final RSTile GRASS_TILE = new RSTile(2551, 3754);
+    private final RSTile BOAT_TILE = new RSTile(2544, 3762);
+    private final RSTile TO_ISLAND = new RSTile(2621, 3685);
+    private final RSTile BANK_TILE = new RSTile(2634, 3668);
+    private final RSTile TO_JARVARD_TILE = new RSTile(2625, 3673);
+    private final RSTile BAD_TILE = new RSTile(2532, 3672);
+    private final RSTile TO_BOAT[] = {
+        new RSTile(2510, 3762), new RSTile(2527, 3766), new RSTile(2537, 3764), new RSTile(2545, 3761)
+    };
+    private final RSTile TO_BANK[] = {
+        new RSTile(2631, 3675), new RSTile(2632, 3673)
+    };
+    private final RSTile TO_ISLAND_BOAT[] = {
+        new RSTile(2629, 3675), new RSTile(2622, 3679)
+    };
+    private final int SNAPE_GRASS = 231;
+    private final int JARVALD = 2438;
+    private final int jarvald = 2435;
+    private final int PEER = 1288;
+    private final int COINS = 995;
+    private final int ROTATION = 230;
+    private final int ANGLE = 100;
+    int total;
+    private State SCRIPT_STATE;
+    private static String status = "Starting";
+    private static boolean showPaint = false;
+    private static final Image background = getImage("http://img38.imageshack.us/img38/5686/paintu.png");
+    private static int $SWITCH_TABLE$scripts$SnapeGrass$State[];
+
+    public SnapeGrass()
+    {
+        total = 0;
+        SCRIPT_STATE = getState();
+    }
+
+    public boolean walkPath(RSTile path[])
+    {
+        Walking.control_click = true;
+        for(int i = closestTile(path); i < path.length; i++)
+        {
+            Point click = Projection.tileToMinimap(path[i]);
+            if(Projection.isInMinimap(click))
+            {
+                Mouse.click(click, 1);
+                long t = System.currentTimeMillis();
+                if(i != path.length - 1)
+                {
+                    for(; !Projection.isInMinimap(Projection.tileToMinimap(path[i + 1])) && Timing.timeFromMark(t) < 5000L; sleep(50L)) { }
+                    if(!Projection.isInMinimap(Projection.tileToMinimap(path[i + 1])))
+                    {
+                        Walking.blindWalkTo(path[i + 1]);
+                    }
+                } else
+                {
+                    for(; distance(Player.getPosition(), path[i]) > 1 && Timing.timeFromMark(t) < 5000L; sleep(50L)) { }
+                    for(; Player.isMoving(); sleep(50L)) { }
+                }
+            } else
+            {
+                println("Searching for path...");
+                Walking.blindWalkTo(path[i]);
+                for(long t = System.currentTimeMillis(); distance(Player.getPosition(), path[i]) > 1 && Timing.timeFromMark(t) < 5000L; sleep(50L)) { }
+                for(; Player.isMoving(); sleep(50L)) { }
+            }
+        }
+
+        return true;
+    }
+
+    public int closestTile(RSTile path[])
+    {
+        for(int i = path.length - 1; i >= 0; i--)
+        {
+            if(Projection.tileToMinimap(path[i]).getX() != -1D)
+            {
+                println((new StringBuilder("closest point: ")).append(i).toString());
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    public int distance(RSTile p1, RSTile p2)
+    {
+        return (int)Math.round(Math.sqrt(Math.pow(p1.getX() - p2.getX(), 2D) + Math.pow(p1.getY() - p2.getY(), 2D)));
+    }
+
+    private boolean getGrass()
+    {
+        while(!Inventory.isFull()) 
+        {
+            RSGroundItem grass[] = GroundItems.findNearest(new int[] {
+                231
+            });
+            int currentRotation = Camera.getCameraRotation();
+            Camera.setCameraAngle(100);
+            if(Math.abs(230 - currentRotation) > 10)
+            {
+                Camera.setCameraRotation(General.random(225, 235));
+                return true;
+            }
+            if(grass.length > 0 && grass[0].getPosition() != BAD_TILE)
+            {
+                if(!grass[0].isOnScreen() && !atGrass())
+                {
+                    Walking.walkTo(GRASS_TILE);
+                    status = "Walking to Grass";
+                }
+                if(!grass[0].isOnScreen() && !atBoat())
+                {
+                    Walking.walkTo(BOAT_TILE);
+                    status = "Walking to Boat";
+                }
+                if(grass[0].getPosition() != BAD_TILE)
+                {
+                    Keyboard.pressKey('\021');
+                    if(grass[0].click(new String[] {
+    "Take"
+}))
+                    {
+                        Keyboard.releaseKey('\021');
+                        waitPickup();
+                        status = "Looting";
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean getCoins()
+    {
+        RSGroundItem coins[] = GroundItems.findNearest(new int[] {
+            995
+        });
+        if(coins.length > 0)
+        {
+            if(!coins[0].isOnScreen())
+            {
+                Walking.walkTo(coins[0].getPosition());
+            }
+            if(coins[0].click(new String[] {
+    "Take"
+}))
+            {
+                waitPickup();
+                status = "Picking up coins";
+            }
+        }
+        return true;
+    }
+
+    private boolean dropCoins()
+    {
+        RSItem coins[] = Inventory.find(new int[] {
+            995
+        });
+        if(coins != null && coins.length > 0)
+        {
+            coins[0].click(new String[] {
+                "Drop"
+            });
+            status = "Dropping Coins";
+            return true;
+        } else
+        {
+            return false;
+        }
+    }
+
+    private boolean travel()
+    {
+        RSNPC travel[] = NPCs.findNearest(new int[] {
+            2438
+        });
+        if(travel.length > 0)
+        {
+            if(!travel[0].isOnScreen())
+            {
+                Walking.walkTo(travel[0].getPosition());
+            }
+            if(DynamicClicking.clickRSNPC(travel[0], "Travel"))
+            {
+                sleep(1500, 2000);
+                status = "Traveling";
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean travel2()
+    {
+        RSNPC travel[] = NPCs.findNearest(new int[] {
+            2435
+        });
+        if(travel.length > 0)
+        {
+            if(!travel[0].isOnScreen())
+            {
+                Walking.walkTo(travel[0].getPosition());
+            }
+            if(DynamicClicking.clickRSNPC(travel[0], "Travel"))
+            {
+                status = "Traveling";
+                sleep(1500, 2000);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean bank()
+    {
+        RSNPC bank[] = NPCs.findNearest(new int[] {
+            1288
+        });
+        if(bank.length > 0)
+        {
+            if(!bank[0].isOnScreen())
+            {
+                Walking.walkTo(bank[0].getPosition());
+            }
+            if(DynamicClicking.clickRSNPC(bank[0], "Talk"))
+            {
+                status = "Depositing Snape Grass";
+                sleep(1500, 2000);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean walkToJarvald()
+    {
+        Walking.control_click = true;
+        Keyboard.pressKey('\021');
+        status = "Walking to Jarvald";
+        walkPath(TO_ISLAND_BOAT);
+        for(; Player.isMoving(); sleep(555L)) { }
+        Keyboard.releaseKey('\021');
+        return true;
+    }
+
+    private boolean walkToBoat()
+    {
+        Walking.control_click = true;
+        Keyboard.pressKey('\021');
+        status = "Walking to Boat";
+        walkPath(TO_BOAT);
+        for(; Player.isMoving(); sleep(555L)) { }
+        Keyboard.releaseKey('\021');
+        return true;
+    }
+
+    private boolean walkToBank()
+    {
+        Walking.control_click = true;
+        status = "Walking to Peer";
+        Keyboard.pressKey('\021');
+        walkPath(TO_BANK);
+        for(; Player.isMoving(); sleep(555L)) { }
+        Keyboard.releaseKey('\021');
+        return true;
+    }
+
+    private boolean atBank()
+    {
+        RSTile myPos = Player.getPosition();
+        return myPos.distanceTo(BANK_TILE) < 15;
+    }
+
+    private boolean atBoat()
+    {
+        RSTile myPos = Player.getPosition();
+        return myPos.distanceTo(BOAT_TILE) < 9;
+    }
+
+    private boolean atGrass()
+    {
+        RSTile myPos = Player.getPosition();
+        return myPos.distanceTo(GRASS_TILE) < 8;
+    }
+
+    private boolean toIslandBoat()
+    {
+        RSTile myPos = Player.getPosition();
+        return myPos.distanceTo(TO_ISLAND) < 10;
+    }
+
+    private boolean toJarvard()
+    {
+        RSTile myPos = Player.getPosition();
+        return myPos.distanceTo(TO_JARVARD_TILE) < 5;
+    }
+
+    private boolean waitPickup()
+    {
+        int invCount = Inventory.getAll().length;
+        for(long t = System.currentTimeMillis(); Timing.timeFromMark(t) < (long)General.random(100, 200);)
+        {
+            if(Inventory.getAll().length > invCount)
+            {
+                return true;
+            }
+            sleep(20, 60);
+            if(Player.isMoving() || Player.getAnimation() != -1)
+            {
+                t = System.currentTimeMillis();
+            }
+        }
+
+        return false;
+    }
+
+    private boolean haveCoins()
+    {
+        RSItem coins[] = Inventory.find(new int[] {
+            995
+        });
+        return coins != null && coins.length > 0;
+    }
+
+    private boolean coins()
+    {
+        RSGroundItem coins[] = GroundItems.find(new int[] {
+            995
+        });
+        return coins != null && coins.length > 0;
+    }
+
+    private boolean haveYesInterface()
+    {
+        RSInterfaceChild click = Interfaces.get(228, 1);
+        return click != null && !click.isHidden();
+    }
+
+    private boolean haveContinueInterface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(242, 4);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean haveBankInterface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(243, 4);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean haveContinue2Interface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(243, 5);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean haveContinue3Interface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(64, 3);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean haveArrive2Interface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(210, 0);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean haveYesDialogInterface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(228, 1);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean haveClickContinueInterface()
+    {
+        RSInterfaceChild continueDialog = Interfaces.get(65, 3);
+        return continueDialog != null && !continueDialog.isHidden();
+    }
+
+    private boolean continue1()
+    {
+        RSInterfaceChild click = Interfaces.get(242, 4);
+        if(click != null && !click.isHidden() && click.click(new String[] {
+    "continue"
+}))
+        {
+            status = "Talking";
+        }
+        return true;
+    }
+
+    private boolean continue2()
+    {
+        RSInterfaceChild click = Interfaces.get(65, 4);
+        if(click != null && !click.isHidden() && click.click(new String[] {
+    "continue"
+}))
+        {
+            status = "Talking";
+        }
+        return true;
+    }
+
+    private boolean continue3()
+    {
+        RSInterfaceChild click = Interfaces.get(243, 5);
+        if(click != null && !click.isHidden() && click.click(new String[] {
+    "continue"
+}))
+        {
+            status = "Talking";
+        }
+        return true;
+    }
+
+    private boolean continue4()
+    {
+        RSInterfaceChild click = Interfaces.get(243, 5);
+        if(click != null && !click.isHidden() && click.click(new String[] {
+    "continue"
+}))
+        {
+            status = "Talking";
+        }
+        return true;
+    }
+
+    private boolean continue5()
+    {
+        RSInterfaceChild click = Interfaces.get(64, 3);
+        if(click != null && !click.isHidden() && click.click(new String[] {
+    "continue"
+}))
+        {
+            status = "Talking";
+        }
+        return true;
+    }
+
+    private boolean yes()
+    {
+        RSInterfaceChild click = Interfaces.get(228, 1);
+        if(click != null && !click.isHidden() && click.click(new String[] {
+    "continue"
+}))
+        {
+            status = "Talking";
+        }
+        return true;
+    }
+
+    public void onPaint(Graphics g)
+    {
+        long timeRan = System.currentTimeMillis() - START_TIME;
+        double multiplier = (double)timeRan / 3600000D;
+        int snapePerHour = (int)((double)total / multiplier);
+        int ms = (int)(System.currentTimeMillis() - START_TIME);
+        int profit = total * 250;
+        int profitPerHour = (int)((double)profit / multiplier);
+        int x = Mouse.getPos().x;
+        int y = Mouse.getPos().y;
+        if(4 < x && x < 515 && 350 < y && y < 360)
+        {
+            showPaint = false;
+        } else
+        {
+            showPaint = true;
+        }
+        if(showPaint)
+        {
+            g.setColor(Color.red);
+            g.fillRect(10, 350, 10, 10);
+            g.drawImage(background, 2, 335, null);
+            g.setColor(Color.white);
+            g.setFont(new Font("Verdana", 1, 14));
+            g.drawString((new StringBuilder(String.valueOf(status))).append(".").toString(), 305, 470);
+            g.drawString(timeToString(ms), 75, 470);
+            g.drawString((new StringBuilder(String.valueOf(total))).append(".").toString(), 95, 385);
+            g.drawString((new StringBuilder(String.valueOf(snapePerHour))).append(".").toString(), 73, 400);
+            g.drawString((new StringBuilder(String.valueOf(profitPerHour))).append(".").toString(), 75, 445);
+            g.drawString((new StringBuilder(String.valueOf(profit))).append(".").toString(), 55, 427);
+            g.drawString((new StringBuilder(String.valueOf(version))).append(".").toString(), 438, 401);
+        }
+    }
+
+    public static String timeToString(int i)
+    {
+        String timeString = String.format("%02d:%02d:%02d", new Object[] {
+            Long.valueOf(TimeUnit.MILLISECONDS.toHours(i)), Long.valueOf(TimeUnit.MILLISECONDS.toMinutes(i) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(i))), Long.valueOf(TimeUnit.MILLISECONDS.toSeconds(i) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(i)))
+        });
+        return timeString;
+    }
+
+    private static Image getImage(String url)
+    {
+        return ImageIO.read(new URL(url));
+        IOException ioexception;
+        ioexception;
+        return null;
+    }
+
+    public static boolean near(int a, int b)
+    {
+        return a == b || a + 1 == b || a - 1 == b || a + 2 == b || a - 2 == b || a + 3 == b || a - 3 == b;
+    }
+
+    private State getState()
+    {
+        if(atBoat())
+        {
+            if(!Inventory.isFull())
+            {
+                return State.LOOT;
+            }
+            if(haveYesInterface())
+            {
+                return State.TALKING;
+            } else
+            {
+                return State.TRAVEL;
+            }
+        }
+        if(atGrass())
+        {
+            if(!Inventory.isFull())
+            {
+                return State.LOOT2;
+            } else
+            {
+                return State.WALK_TO_BOAT;
+            }
+        }
+        if(toIslandBoat())
+        {
+            if(!Inventory.isFull() && Inventory.getCount(new int[] {
+    995
+}) > 1)
+            {
+                if(haveYesInterface())
+                {
+                    return State.TALKING;
+                }
+                if(haveContinueInterface())
+                {
+                    return State.TALKING;
+                } else
+                {
+                    return State.TRAVEL2;
+                }
+            }
+            if(Inventory.isFull())
+            {
+                return State.WALK_TO_BANK;
+            } else
+            {
+                return State.SLEEP;
+            }
+        }
+        if(atBank())
+        {
+            if(Inventory.getCount(new int[] {
+    231
+}) < 20 && Inventory.getCount(new int[] {
+    995
+}) > 1)
+            {
+                return State.WALK_TO_JARVARD;
+            }
+            if(coins() && Inventory.getCount(new int[] {
+    231
+}) < 20)
+            {
+                return State.PICKUP_COINS;
+            }
+            if(haveCoins())
+            {
+                return State.DROP_COINS;
+            }
+            if(haveContinue2Interface())
+            {
+                return State.TALKING;
+            }
+            if(haveContinue3Interface())
+            {
+                return State.TALKING;
+            }
+            if(haveBankInterface())
+            {
+                return State.TALKING;
+            }
+            if(haveClickContinueInterface())
+            {
+                return State.TALKING;
+            }
+            if(haveYesDialogInterface())
+            {
+                return State.TALKING;
+            } else
+            {
+                return State.BANK;
+            }
+        }
+        if(toJarvard())
+        {
+            if(!Inventory.isFull())
+            {
+                return State.WALK_TO_JARVARD;
+            } else
+            {
+                return State.WALK_TO_BANK;
+            }
+        } else
+        {
+            return null;
+        }
+    }
+
+    public void run()
+    {
+        Mouse.setSpeed(General.random(500, 700));
+_L16:
+        SCRIPT_STATE = getState();
+        $SWITCH_TABLE$scripts$SnapeGrass$State()[SCRIPT_STATE.ordinal()];
+        JVM INSTR tableswitch 1 15: default 272
+    //                   1 112
+    //                   2 104
+    //                   3 272
+    //                   4 241
+    //                   5 249
+    //                   6 192
+    //                   7 225
+    //                   8 264
+    //                   9 233
+    //                   10 172
+    //                   11 156
+    //                   12 164
+    //                   13 180
+    //                   14 272
+    //                   15 148;
+           goto _L1 _L2 _L3 _L1 _L4 _L5 _L6 _L7 _L8 _L9 _L10 _L11 _L12 _L13 _L1 _L14
+_L1:
+        continue; /* Loop/switch isn't completed */
+_L3:
+        bank();
+        continue; /* Loop/switch isn't completed */
+_L2:
+        getGrass();
+        if(Inventory.getCount(new int[] {
+    231
+}) > 25)
+        {
+            total += 27;
+        }
+        continue; /* Loop/switch isn't completed */
+_L14:
+        getGrass();
+        continue; /* Loop/switch isn't completed */
+_L11:
+        dropCoins();
+        continue; /* Loop/switch isn't completed */
+_L12:
+        getCoins();
+        continue; /* Loop/switch isn't completed */
+_L10:
+        waitPickup();
+        continue; /* Loop/switch isn't completed */
+_L13:
+        sleep(50, 150);
+        continue; /* Loop/switch isn't completed */
+_L6:
+        continue1();
+        continue2();
+        continue3();
+        continue4();
+        continue5();
+        yes();
+        continue; /* Loop/switch isn't completed */
+_L7:
+        travel();
+        continue; /* Loop/switch isn't completed */
+_L9:
+        travel2();
+        continue; /* Loop/switch isn't completed */
+_L4:
+        walkToBank();
+        continue; /* Loop/switch isn't completed */
+_L5:
+        sleep(2000L);
+        walkToBoat();
+        continue; /* Loop/switch isn't completed */
+_L8:
+        walkToJarvald();
+        if(true) goto _L16; else goto _L15
+_L15:
+    }
+
+    static int[] $SWITCH_TABLE$scripts$SnapeGrass$State()
+    {
+        $SWITCH_TABLE$scripts$SnapeGrass$State;
+        if($SWITCH_TABLE$scripts$SnapeGrass$State == null) goto _L2; else goto _L1
+_L1:
+        return;
+_L2:
+        JVM INSTR pop ;
+        int ai[] = new int[State.values().length];
+        try
+        {
+            ai[State.BANK.ordinal()] = 2;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.DROP_COINS.ordinal()] = 11;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.LOOT.ordinal()] = 1;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.LOOT2.ordinal()] = 15;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.LOOTING.ordinal()] = 10;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.PICKUP_COINS.ordinal()] = 12;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.SLEEP.ordinal()] = 13;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.SLEEP2.ordinal()] = 14;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.TALKING.ordinal()] = 6;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.TRAVEL.ordinal()] = 7;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.TRAVEL2.ordinal()] = 9;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.WALK_TO_BANK.ordinal()] = 4;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.WALK_TO_BOAT.ordinal()] = 5;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.WALK_TO_JARVARD.ordinal()] = 8;
+        }
+        catch(NoSuchFieldError _ex) { }
+        try
+        {
+            ai[State.WALK_TO_SPAWNS.ordinal()] = 3;
+        }
+        catch(NoSuchFieldError _ex) { }
+        return $SWITCH_TABLE$scripts$SnapeGrass$State = ai;
+    }
+
+}

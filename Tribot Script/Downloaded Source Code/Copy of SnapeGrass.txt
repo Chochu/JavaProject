@@ -1,0 +1,158 @@
+package scripts;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Point;
+import java.awt.event.KeyEvent;
+import java.util.Random;
+
+import org.omg.PortableServer.POAManagerPackage.State;
+import org.tribot.api.DynamicClicking;
+import org.tribot.api.General;
+import org.tribot.api.Timing;
+import org.tribot.api.input.Keyboard;
+import org.tribot.api.input.Mouse;
+import org.tribot.api.types.InventoryItem;
+import org.tribot.api2007.Banking;
+import org.tribot.api2007.Camera;
+import org.tribot.api2007.Game;
+import org.tribot.api2007.GameTab;
+import org.tribot.api2007.Interfaces;
+import org.tribot.api2007.Inventory;
+import org.tribot.api2007.NPCs;
+import org.tribot.api2007.Objects;
+import org.tribot.api2007.Player;
+import org.tribot.api2007.Projection;
+import org.tribot.api2007.Skills;
+import org.tribot.api2007.Walking;
+import org.tribot.api2007.types.RSInterfaceChild;
+import org.tribot.api2007.types.RSItem;
+import org.tribot.api2007.types.RSNPC;
+import org.tribot.api2007.types.RSObject;
+import org.tribot.api2007.types.RSTile;
+import org.tribot.script.EnumScript;
+import org.tribot.script.Script;
+import org.tribot.script.ScriptManifest;
+import org.tribot.script.interfaces.Painting;
+
+
+@ScriptManifest(authors = { "Name" }, category = "CATEGORY", name = "SCRIPT NAME", description = "WHAT IT DOES", version = A NUMBER)
+
+
+public class Shell extends Script implements Painting {
+
+//Variable---------------------------------------------------
+	
+	private STATE SS = getState();
+	private final int [] NAME = {1276}; // a array of ID
+	private final int NAMEs = ; // a single ID
+	final RSTile[] WALKTO____ = {  //this is to declare a path way
+
+	};
+	private final long startTime = System.currentTimeMillis(); //timer
+	String sa; //Some String, I use it to store my player's action
+	//any other variable that you want to use
+	
+//-------------------------------------------------------------
+	
+//Main Loop----------------------------------------------------
+	@Override
+	public void onPaint(Graphics g) {
+		g.setColor(Color.WHITE); //set color
+		g.drawString(sa , 10, 70); //Explain of using the sa variable from before
+		//Any other paint stuff goes here, such as Code generated using Enfilade's Easel
+	}
+	
+	@Override
+	public void run() {
+		println("The Bot has run");
+		while(true){
+			Mouse.setSpeed(160); //this is mouse speed, not necessay 
+			SS = getState(); //get the state of what you should do right now
+			//put everything else that you want to loop, such as reseting the EXP variable or LVL variable
+			
+			switch(SS){ //loop through the enum array and check what state does it return
+			case CHECK: //this is default return of getState method
+
+				break;
+			case example1:
+				sa = "Doing Example One";
+				ExampleOne();
+				break;
+			case example2:
+				sa = "Doing Example Two";
+				ExampleTwo();
+				running();
+				break;
+			//So on and So forth
+			default:
+				break;
+			
+			}
+		}
+	}
+
+//-------------------------------------------------------------
+	
+	
+//STATE--------------------------------------------------------
+		private STATE getState(){
+			if(here){
+				if(this){
+					return STATE.example1;
+				}
+				return STATE.example2;
+			}
+			//So on and so forth, you know the general rule
+			return STATE.CHECK; //default return
+		}
+		public enum STATE { 
+			CHECK, example1, example2
+		}	
+//-------------------------------------------------------------
+
+//Check Method---------------------------------------------------
+	public boolean ATLOCATION___(){
+		if(THIS IS TRUE){
+			return false;
+		}
+		return true;
+	}
+	//Any other thing you check, such as near this or have this thing on inventory		
+
+//-------------------------------------------------------------
+
+//DO METHOD--------------------------------------------------------
+
+
+	private void WALKTO____() { //Walk path [this is a example
+		Walking.walkPath(WALKTO____)
+		
+	}
+
+	private void DOTHIS(){
+		//clicking method or something
+		}
+	
+	//ETC...
+//-------------------------------------------------------------
+
+//Other Method-------------------------------------------------
+//Other method such as...
+	private void sleeps() {
+			sleep(500);
+		while(Player.getAnimation() != -1){
+			sleep(50);
+		}
+	}
+	private void TurnCamera(RSObject EX){
+		Camera.setCameraAngle(0);
+		RSObject target = EX;
+		Camera.turnToTile(target.getPosition());
+		EX.click("Open");
+		sleep(50);
+	}
+//-------------------------------------------------------------
+
+
+} // END OF SCRIPT
